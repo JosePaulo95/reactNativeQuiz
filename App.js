@@ -4,6 +4,8 @@ import {
   TouchableOpacity,
   Text,
   View,
+  ProgressBarAndroid,
+  Alert
 } from 'react-native'
 
 export default class App extends Component {
@@ -15,32 +17,115 @@ export default class App extends Component {
         alternativas: [],
         index_correta: null
       },
+      pontos: 0,
       acertou: false,
-      index_marcada: null
+      index_marcada: null,
+      tempo_restante: 15,
+      tempo_maximo: 15,
+      bonus_tempo: 7,
+      ref_timer: null
     }
   }
   componentDidMount(){
     this.gerarQuestao();
   }
 
-  marcouAlternativa = (index) => {
+  decrementaTempo(){
     this.setState({
-      acertou: index == this.state.questao.index_correta,
+      tempo_restante: Math.max(this.state.tempo_restante-1, 0)
+    })
+
+    if(this.state.tempo_restante==0){
+      clearInterval(this.state.ref_timer);
+      this.gameOver("Sem tempo!");
+    }
+  }
+  gameOver(causa_str){
+    const ptos_str = this.state.pontos == 1?"ponto":"pontos"; 
+
+    Alert.alert(
+      causa_str,
+      "A alternativa correta era "+this.state.questao.alternativas[this.state.questao.index_correta]+"."+
+      "\nVocê fez "+this.state.pontos+" "+ptos_str+".\n",
+      [
+        {text: 'Recomeçar', onPress: () => {
+          this.iniciar();
+        }},
+      ],
+      {cancelable: false},
+    );
+
+    //alert("Que pena! A alternativa correta era "+this.state.questao.alternativas[this.state.questao.index_correta]);
+  }
+  iniciar(){
+    this.setState({
+      pontos: 0,
+      tempo_restante: this.state.tempo_maximo,
+      index_marcada: null,
+    })
+    this.resetarNovaQuestao();
+  }
+  aplicaBonusTempo(){
+    this.setState({
+      tempo_restante: Math.min(this.state.tempo_maximo,this.state.tempo_restante+this.state.bonus_tempo)
+    });
+  }
+  resetarNovaQuestao(){
+    this.gerarQuestao();
+    this.setState({
+      acertou: false,
+      index_marcada: null
+    })
+  }
+  marcouAlternativa = (index) => {
+    const acertou = index == this.state.questao.index_correta;
+
+    this.setState({
+      acertou: acertou,
       index_marcada: index
     })
+
+    if(acertou){
+      if(this.state.pontos == 0){
+        let ref_timer = setInterval(() => {
+          this.decrementaTempo();
+        }, 1000);
+
+        this.setState({
+          ref_timer: ref_timer
+        })
+      }
+      this.setState({
+        pontos: this.state.pontos+1
+      });
+      this.aplicaBonusTempo();
+      setTimeout(() => {
+        this.resetarNovaQuestao();
+      }, 400)
+    }else{
+      clearInterval(this.state.ref_timer);
+      setTimeout(() => {
+        this.gameOver(":(");
+      }, 700)
+    }
+
   }
 
  render() {
    return (
     <View style={styles.outside}>
       <View style={styles.container}>
-        <View style={styles.footer}>
+        <View style={styles.header}>
           <Text>
             &#9719;
           </Text>
-          <View style={styles.footerBar}>
+          <ProgressBarAndroid
+            styleAttr="Horizontal"
+            indeterminate={false}
+            progress={this.state.tempo_restante/this.state.tempo_maximo}
+            style={this.state.tempo_restante/this.state.tempo_maximo<=0.3?styles.RedTimerBar:styles.GreenTimerBar}
+          />
 
-          </View>
         </View>
         <Text  style={styles.title}>
           {this.state.questao.titulo}
@@ -52,7 +137,7 @@ export default class App extends Component {
               onPress={()=>this.marcouAlternativa(index)}
               key={index}
               style={this.state.index_marcada == index ? this.state.acertou?styles.correctOption:styles.wrongOption:styles.option}
-              //disabled={this.state.index_marcada != null}
+              disabled={this.state.index_marcada != null}
             >
                 <Text style={this.state.index_marcada == index ? this.state.acertou?styles.correctOptionText:styles.wrongOptionText:styles.optionText}>
                   {alternativa} {this.state.index_marcada == index ? this.state.acertou?"✓":"✘":""}
@@ -68,14 +153,14 @@ export default class App extends Component {
   gerarQuestao(){
     const pares_questoes = [
       [5,[50,70,80,200]],
-      [8,[40,50,80,200]],
+      [8,[50,80,200]],
       [20, [15,25,40,45,50,55,65,70,75,80,90,200]],
       [25, [16,20,24,32,36,40,44,48,60,80,200]],
       [30, [30,40,50,70,80,200]],
       [40, [20,50,70,80,90,200]],
       [60, [20,30,40,50,90,200]],
-      [70, [50,90,200]],
-      [75, [16,20,24,32,36,40,80,200]],
+      [70, [50,200]],
+      [75, [16,20,40,80,200]],
       [80, [15,20,25,40,45,50,55,70,80,90,200]],
       [90, [5,15,20,25,30,35,40,45,50,55,60,65,70]]
     ]
@@ -89,14 +174,16 @@ export default class App extends Component {
     var a = pares_questoes[index_par][0];
     var b = pares_questoes[index_par][1][index_b];
 
+    var erros = a>=25&&b>=80?5:1;
+
     enunciado = "Quanto é "+a+"% de "+b+"?";
 
     var resposta_correta = a/100*b;
     respostas.push(resposta_correta);
-    respostas.push(resposta_correta-1);
-    respostas.push(resposta_correta-2);
-    respostas.push(resposta_correta+1);
-    respostas.push(resposta_correta+2);
+    respostas.push(resposta_correta-erros);
+    respostas.push(resposta_correta-erros*2);
+    respostas.push(resposta_correta+erros);
+    respostas.push(resposta_correta+erros*2);
 
     respostas = this.shuffleArray(respostas);
     
@@ -137,7 +224,7 @@ const styles = StyleSheet.create({
     width: "96%",
     height: "96%"
   },
-  footer:{
+  header:{
     backgroundColor: "rgba(0, 0, 0, 0.05)",
     padding: 15,
     justifyContent: "center",
@@ -146,12 +233,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 2,
     alignItems: "center"
   },
-  footerBar:{
+  RedTimerBar:{
     marginLeft: 5,
-    width: 240,
-    height: 12,
-    borderRadius: 20,
-    backgroundColor: "red",
+    flex:1,
+    color: "red"
+  },
+  GreenTimerBar:{
+    marginLeft: 5,
+    flex:1,
+    color: "green"
   },
   title:{ 
     textAlign: "center",
