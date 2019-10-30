@@ -11,13 +11,16 @@ export default class App extends Component {
     super(props)
     this.state = {
       questao: {
-        titulo : "Quanto eh 8% de 30?",
-        alternativas: ["2", "4", "7", "10", "14"],
-        index_correta: 2
+        titulo : "",
+        alternativas: [],
+        index_correta: null
       },
       acertou: false,
       index_marcada: null
     }
+  }
+  componentDidMount(){
+    this.gerarQuestao();
   }
 
   marcouAlternativa = (index) => {
@@ -25,8 +28,6 @@ export default class App extends Component {
       acertou: index == this.state.questao.index_correta,
       index_marcada: index
     })
-
-
   }
 
  render() {
@@ -62,6 +63,63 @@ export default class App extends Component {
       </View>
     </View>
     )
+  }
+
+  gerarQuestao(){
+    const pares_questoes = [
+      [5,[50,70,80,200]],
+      [8,[40,50,80,200]],
+      [20, [15,25,40,45,50,55,65,70,75,80,90,200]],
+      [25, [16,20,24,32,36,40,44,48,60,80,200]],
+      [30, [30,40,50,70,80,200]],
+      [40, [20,50,70,80,90,200]],
+      [60, [20,30,40,50,90,200]],
+      [70, [50,90,200]],
+      [75, [16,20,24,32,36,40,80,200]],
+      [80, [15,20,25,40,45,50,55,70,80,90,200]],
+      [90, [5,15,20,25,30,35,40,45,50,55,60,65,70]]
+    ]
+
+    var enunciado;
+    var respostas = Array();
+
+    var index_par = this.getRandomIntInclusive(0,pares_questoes.length-1);
+    var index_b = this.getRandomIntInclusive(0, pares_questoes[index_par][1].length-1);
+
+    var a = pares_questoes[index_par][0];
+    var b = pares_questoes[index_par][1][index_b];
+
+    enunciado = "Quanto é "+a+"% de "+b+"?";
+
+    var resposta_correta = a/100*b;
+    respostas.push(resposta_correta);
+    respostas.push(resposta_correta-1);
+    respostas.push(resposta_correta-2);
+    respostas.push(resposta_correta+1);
+    respostas.push(resposta_correta+2);
+
+    respostas = this.shuffleArray(respostas);
+    
+    var index_correta = respostas.indexOf(resposta_correta);
+
+    this.setState({
+      questao: {
+        titulo: enunciado,
+        alternativas: respostas,
+        index_correta: index_correta
+      }
+    })
+  }
+
+  getRandomIntInclusive(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;      ;
+  }
+  shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
   }
 }
 
