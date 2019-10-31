@@ -10,7 +10,7 @@ import {
 
 export default class App extends Component {
   constructor(props) {
-    super(props)
+    super(props);
     this.state = {
       questao: {
         titulo : "",
@@ -20,16 +20,16 @@ export default class App extends Component {
       pontos: 0,
       acertou: false,
       index_marcada: null,
-      tempo_restante: 15,
-      tempo_maximo: 15,
-      bonus_tempo: 7,
+      tempo_restante: 20,
+      tempo_maximo: 20,
+      bonus_tempo: 8,
       ref_timer: null
     }
   }
   componentDidMount(){
     this.gerarQuestao();
+    this.pares_questoes = [];
   }
-
   decrementaTempo(){
     this.setState({
       tempo_restante: Math.max(this.state.tempo_restante-1, 0)
@@ -54,8 +54,6 @@ export default class App extends Component {
       ],
       {cancelable: false},
     );
-
-    //alert("Que pena! A alternativa correta era "+this.state.questao.alternativas[this.state.questao.index_correta]);
   }
   iniciar(){
     this.setState({
@@ -151,7 +149,7 @@ export default class App extends Component {
   }
 
   gerarQuestao(){
-    const pares_questoes = [
+    const pares_questoes_base = [
       [5,[50,70,80,200]],
       [8,[50,80,200]],
       [20, [15,25,40,45,50,55,65,70,75,80,90,200]],
@@ -163,16 +161,19 @@ export default class App extends Component {
       [75, [16,20,40,80,200]],
       [80, [15,20,25,40,45,50,55,70,80,90,200]],
       [90, [5,15,20,25,30,35,40,45,50,55,60,65,70]]
-    ]
+    ];
+    if(this.pares_questoes == null || this.pares_questoes.length == 0){
+      this.pares_questoes = [...pares_questoes_base];
+    }
 
     var enunciado;
     var respostas = Array();
 
-    var index_par = this.getRandomIntInclusive(0,pares_questoes.length-1);
-    var index_b = this.getRandomIntInclusive(0, pares_questoes[index_par][1].length-1);
+    var index_par = this.getRandomIntInclusive(0,this.pares_questoes.length-1);
+    var index_b = this.getRandomIntInclusive(0, this.pares_questoes[index_par][1].length-1);
 
-    var a = pares_questoes[index_par][0];
-    var b = pares_questoes[index_par][1][index_b];
+    var a = this.pares_questoes[index_par][0];
+    var b = this.pares_questoes[index_par][1][index_b];
 
     var erros = a>=25&&b>=80?5:1;
 
@@ -196,6 +197,11 @@ export default class App extends Component {
         index_correta: index_correta
       }
     })
+
+    this.pares_questoes[index_par][1].splice(index_b,1);
+    if(this.pares_questoes[index_par][1].length == 0){
+      this.pares_questoes.splice(index_par, 1);
+    }
   }
 
   getRandomIntInclusive(min, max) {
